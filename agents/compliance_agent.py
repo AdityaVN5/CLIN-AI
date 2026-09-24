@@ -70,18 +70,26 @@ PLACEHOLDER_PATTERNS = [
 
 DIAGNOSIS_KEYWORDS = [
     "diagnosis", "impression", "likely", "possible", "suspected",
-    "consistent with", "differential",
+    "consistent with", "differential", "acute", "chronic", "syndrome",
+    "disease", "disorder", "infection", "bronchitis", "hypertension",
+    "diabetes", "evaluation", "condition", "etiology", "status post",
+    "s/p", "r/o", "rule out", "presentation", "findings", "presumed",
 ]
 
 TREATMENT_KEYWORDS = [
     "prescribe", "prescribed", "order", "ordered", "follow-up",
-    "follow up", "refer", "referral", "test", "medication", "start",
-    "continue", "recommend",
+    "follow up", "refer", "referral", "test", "lab", "medication",
+    "med", "drug", "dose", "tablet", "capsule", "mg", "mcg",
+    "start", "continue", "recommend", "therapy", "rest", "hydration",
+    "inhaler", "treatment", "monitor", "precautions", "education", "counsel",
 ]
 
 HISTORY_KEYWORDS = [
     "history", "prior", "previous", "family history", "past medical",
-    "pmh", "allerg",
+    "pmh", "allerg", "nkda", "chronic", "baseline", "social",
+    "tobacco", "smoker", "smoking", "alcohol", "surgical", "hx",
+    "hypertension", "diabetes", "asthma", "cardiac", "medical record",
+    "reconciled", "denies",
 ]
 
 # Points-based scoring (out of 100) — programmatic, not LLM-assigned
@@ -261,27 +269,41 @@ def check_empty_sections(sections: dict) -> list:
 
 def check_assessment(sections: dict) -> bool:
     """Checks whether the Assessment section contains a diagnosis or
-    clinical-impression keyword."""
+    clinical-impression keyword or substantial clinical assessment content."""
     text = sections.get("Assessment", "").lower()
     if not _is_meaningful(sections.get("Assessment", "")):
         return False
-    return any(keyword in text for keyword in DIAGNOSIS_KEYWORDS)
+    if any(keyword in text for keyword in DIAGNOSIS_KEYWORDS):
+        return True
+    return len(text.strip()) >= 15
 
 
 def check_plan(sections: dict) -> bool:
     """Checks whether the Plan section contains a treatment/next-step
-    keyword."""
+    keyword or substantial clinical management instructions."""
     text = sections.get("Plan", "").lower()
     if not _is_meaningful(sections.get("Plan", "")):
         return False
-    return any(keyword in text for keyword in TREATMENT_KEYWORDS)
+    if any(keyword in text for keyword in TREATMENT_KEYWORDS):
+        return True
+    return len(text.strip()) >= 15
 
 
 def check_history(sections: dict) -> bool:
     """Checks whether patient history/context appears anywhere in the
     note (commonly documented in Subjective)."""
     combined = " ".join(sections.values()).lower()
-    return any(keyword in combined for keyword in HISTORY_KEYWORDS)
+    if any(keyword in combined for keyword in HISTORY_KEYWORDS):
+        return True
+    subj = sections.get("Subjective", "").lower()
+    return (
+        len(subj) > 30
+        and not _is_placeholder(subj)
+        and any(w in subj for w in (
+            "year", "month", "day", "week", "old", "male", "female",
+            "denies", "reports", "complains", "presents", "onset", "hx"
+        ))
+    )
 
 
 def run_rule_based_checks(soap_note: str) -> dict:
@@ -437,13 +459,17 @@ def calculate_score(rule_result: dict, llm_result: dict) -> int:
       Subjective / Objective / Assessment / Plan  -> 10 pts each (40)
       Diagnosis present / Treatment present / History present -> 10 pts each (30)
       LLM completeness_score (0-20) + clarity_score (0-10)     -> (30)
-    Total = 100. The score is NEVER assigned directly by the LLM —
-    the LLM only contributes the completeness/clarity sub-scores,
-    which are added programmatically here.
+    Total = 100.
+    If LLM review is unavailable, rule points are scaled to 100% so valid notes
+    are not arbitrarily penalized.
     """
     rule_points = rule_result["points"]  # out of 70
-    llm_points = llm_result["completeness_score"] + llm_result["clarity_score"]  # out of 30
-    total = rule_points + llm_points
+    if llm_result.get("llm_available", False):
+        llm_points = int(llm_result.get("completeness_score", 15)) + int(llm_result.get("clarity_score", 10))
+        total = rule_points + llm_points
+    else:
+        # Scale 70 rule points proportionally to 100
+        total = (rule_points / 70.0) * 100.0
     return max(0, min(100, round(total)))
 
 
@@ -485,6 +511,9 @@ def build_result(rule_result: dict, llm_result: dict) -> dict:
         "missing_information": missing_information,
         "warnings": warnings,
         "recommendations": recommendations,
+        "diagnosis_present": rule_result["diagnosis_present"],
+        "treatment_present": rule_result["treatment_present"],
+        "history_present": rule_result["history_present"],
         "llm_available": llm_result.get("llm_available", False),
     }
 

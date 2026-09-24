@@ -1,0 +1,6 @@
+{
+  "name": "Clin AT — Minimal AI Clinical Documentation",
+  "description": "Minimalist black and white clinical documentation assistant inspired by ChatGPT. Transcribes consultations into structured SOAP notes, compliance audits, ICD-10 codes, and EHR records.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
