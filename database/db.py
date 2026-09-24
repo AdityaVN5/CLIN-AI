@@ -105,3 +105,11 @@ def get_next_patient_id(prefix: str = "DEMO-") -> str:
 
     next_num = max_num + 1
     return f"{prefix}{next_num:03d}"
+
+def delete_consultation(consultation_id: int):
+    with get_connection() as c:
+        c.execute("DELETE FROM compliance_results WHERE consultation_id=?", (consultation_id,))
+        c.execute("DELETE FROM icd_codes WHERE consultation_id=?", (consultation_id,))
+        c.execute("DELETE FROM audit_logs WHERE consultation_id=?", (consultation_id,))
+        c.execute("DELETE FROM consultations WHERE consultation_id=?", (consultation_id,))
+        c.commit()

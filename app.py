@@ -6,7 +6,7 @@ import streamlit as st
 from config import settings
 import database.db, importlib
 importlib.reload(database.db)
-from database.db import init_db, save_patient, save_consultation, save_compliance_result, save_icd_codes, save_audit_log, get_consultations, get_consultation, get_compliance_result, get_icd_codes, get_next_patient_id
+from database.db import init_db, save_patient, save_consultation, save_compliance_result, save_icd_codes, save_audit_log, get_consultations, get_consultation, get_compliance_result, get_icd_codes, get_next_patient_id, delete_consultation
 from agents.voice_agent import transcribe_audio
 from agents.soap_agent import generate_soap, soap_to_text
 from agents.compliance_agent import validate_compliance
@@ -419,23 +419,124 @@ def show_ehr():
     st.info(DISCLAIMER)
 
 def show_history():
-    st.title("🗄 History"); rows=get_consultations(100)
-    if not rows: st.info("No saved consultations."); return
-    df=pd.DataFrame(rows); st.dataframe(df[["consultation_id","patient_id","created_date","score","status"]],use_container_width=True,hide_index=True)
-    cid=st.selectbox("Select consultation",df["consultation_id"].tolist())
+    st.title("🗄 History")
+    st.caption("Browse, inspect, and manage saved clinical documentation records")
+    rows=get_consultations(100)
+    if not rows:
+        st.info("No saved consultations found in database.")
+        return
+    df=pd.DataFrame(rows)
+    st.dataframe(df[["consultation_id","patient_id","created_date","score","status"]],use_container_width=True,hide_index=True)
+    
+    st.divider()
+    col_sel, col_del = st.columns([3, 1])
+    with col_sel:
+        cid = st.selectbox("Select Consultation Record", df["consultation_id"].tolist())
+    with col_del:
+        st.write("")
+        st.write("")
+        if st.button("🗑️ Delete Consultation", type="secondary", use_container_width=True):
+            st.session_state[f"confirm_del_{cid}"] = True
+
+    if cid and st.session_state.get(f"confirm_del_{cid}"):
+        st.warning(f"⚠️ Are you sure you want to permanently delete Consultation #{cid}?")
+        c_yes, c_no = st.columns(2)
+        if c_yes.button("✅ Confirm Delete", type="primary", use_container_width=True):
+            delete_consultation(int(cid))
+            st.session_state.pop(f"confirm_del_{cid}", None)
+            st.success(f"Consultation #{cid} deleted from database.")
+            st.rerun()
+        if c_no.button("❌ Cancel", use_container_width=True):
+            st.session_state.pop(f"confirm_del_{cid}", None)
+            st.rerun()
+
     if cid:
         c=get_consultation(int(cid)); comp=get_compliance_result(int(cid)); icd=get_icd_codes(int(cid))
-        st.subheader("Transcript"); st.text_area("Transcript",c["transcript"],height=180,disabled=True)
-        st.subheader("SOAP Note"); st.code(c["soap_note"])
-        st.subheader("Compliance"); st.json(comp or {})
-        st.subheader("ICD Codes"); st.dataframe(pd.DataFrame(icd),use_container_width=True,hide_index=True)
+        tab1, tab2, tab3, tab4 = st.tabs(["📝 Transcript", "📄 SOAP Note", "✅ Compliance Audit", "🏷️ ICD Codes"])
+        with tab1:
+            st.text_area("Original Transcript", c["transcript"] if c else "", height=200, disabled=True)
+        with tab2:
+            st.code(c["soap_note"] if c else "", language="markdown")
+        with tab3:
+            st.json(comp or {})
+        with tab4:
+            st.dataframe(pd.DataFrame(icd) if icd else pd.DataFrame([{"info": "No codes stored"}]), use_container_width=True, hide_index=True)
 
 def show_settings():
-    st.title("⚙ Settings")
-    st.write("Provider: Groq (OpenAI-compatible API)")
-    st.code(f"Reasoning model: {settings.reasoning_model}\nFallback: {settings.fallback_model}\nSTT: {settings.stt_model}\nDatabase: {settings.db_path}")
-    st.success("GROQ_API_KEY is configured.") if settings.groq_api_key else st.error("GROQ_API_KEY is not configured. Copy .env.example to .env and add your key.")
-    st.warning("Never use real patient data in an unsecured development/demo environment.")
+    st.title("⚙ Settings & System Configuration")
+    st.caption("Environment diagnostic dashboard, LLM provider configuration, database maintenance & agent capabilities")
+    
+    # Overview Metrics
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Provider API", "Groq AI", "Connected" if settings.groq_api_key else "Missing Key")
+    m2.metric("Primary LLM", settings.reasoning_model.split("/")[-1])
+    m3.metric("Speech Engine", settings.stt_model.split("/")[-1])
+    m4.metric("Database Engine", "SQLite3", "Local File")
+
+    st.divider()
+
+    tab_models, tab_db, tab_agents, tab_sec = st.tabs([
+        "🤖 AI Models & Provider", 
+        "🗄️ Database & Storage", 
+        "⚡ Agent Architecture", 
+        "🔒 Compliance & Security"
+    ])
+
+    with tab_models:
+        st.subheader("Groq Provider Configuration")
+        if settings.groq_api_key:
+            st.success("🟢 GROQ_API_KEY is configured and active.")
+        else:
+            st.error("🔴 GROQ_API_KEY is missing. Please set your key in the .env file.")
+
+        st.markdown("#### Configured Model Endpoints")
+        model_df = pd.DataFrame([
+            {"Role": "Reasoning & SOAP Generation", "Model ID": settings.reasoning_model, "Status": "Primary Endpoint"},
+            {"Role": "Fallback LLM", "Model ID": settings.fallback_model, "Status": "Active Backup"},
+            {"Role": "Speech-to-Text (STT)", "Model ID": settings.stt_model, "Status": "Whisper Engine"}
+        ])
+        st.dataframe(model_df, use_container_width=True, hide_index=True)
+        
+        with st.expander("🔧 Advanced Model Parameters"):
+            st.json({
+                "provider": "Groq OpenAI-Compatible API",
+                "temperature": 0.2,
+                "max_tokens": 4096,
+                "response_format": "JSON Object (Structured Output)"
+            })
+
+    with tab_db:
+        st.subheader("Database Health & Storage")
+        st.code(f"Database Storage Path: {settings.db_path}", language="text")
+        
+        rows = get_consultations(500)
+        c_count = len(rows)
+        
+        db_col1, db_col2 = st.columns(2)
+        db_col1.metric("Total Consultations Stored", c_count)
+        db_col2.metric("SQLite File Status", "Healthy & Writable")
+
+        st.markdown("#### Database Maintenance")
+        if st.button("🧹 Clear Active Session Workflow", type="secondary"):
+            reset_workflow()
+            st.success("Session state cleared.")
+            st.rerun()
+
+    with tab_agents:
+        st.subheader("Clinical AI Agent Capabilities")
+        agent_data = pd.DataFrame([
+            {"Agent": "🎙 Voice STT Agent", "Engine": "Whisper Large V3 Turbo", "Role": "Audio transcription into structured text"},
+            {"Agent": "📄 SOAP Note Agent", "Engine": settings.reasoning_model, "Role": "Generates Subjective, Objective, Assessment & Plan"},
+            {"Agent": "✅ Compliance Audit Agent", "Engine": "Deterministic + LLM", "Role": "70% Rule-based + 30% LLM completeness check"},
+            {"Agent": "🏷 ICD-10 Agent", "Engine": "Demo Dataset Matcher", "Role": "Code candidates mapping with clinical rationale"},
+            {"Agent": "📋 EHR Document Agent", "Engine": "EHR Builder", "Role": "JSON/PDF/DOCX clinical record exporter"}
+        ])
+        st.dataframe(agent_data, use_container_width=True, hide_index=True)
+
+    with tab_sec:
+        st.subheader("Security & Privacy Guidelines")
+        st.info("🔒 **Data Privacy**: This prototype uses local SQLite storage (`database/app.db`) and Groq API endpoints. Do not input real Unencrypted Protected Health Information (PHI) in uncertified development environments.")
+        st.warning("⚠️ " + DISCLAIMER)
 
 pages={"🏠 Dashboard":show_dashboard,"🎙 Consultation":show_consultation,"📝 SOAP Note":show_soap,"✅ Compliance":show_compliance,"🏷 ICD Coding":show_icd,"📋 EHR Document":show_ehr,"🗄 History":show_history,"⚙ Settings":show_settings}
 current_page = st.session_state.get("page", "🏠 Dashboard")

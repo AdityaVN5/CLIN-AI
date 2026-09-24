@@ -6,5 +6,6 @@ database/app.db
 reports/*
 !reports/.gitkeep
 .DS_Store
-.venv
-venv
+.venv/*
+venv/*
+audio_samples/*
