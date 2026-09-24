@@ -1,0 +1,403 @@
+AI Clinical Documentation Assistant
+Project Documentation (MVP using Streamlit + Azure OpenAI)
+1. Project Overview
+Project Name
+AI Clinical Documentation Assistant
+Domain
+Life Sciences & Healthcare
+Problem Statement
+Healthcare professionals spend a significant amount of time creating clinical documentation, reducing the time available for patient care. Manual documentation also increases the risk of incomplete records, coding errors, and physician burnout.
+The AI Clinical Documentation Assistant automates clinical note generation, compliance validation, ICD code recommendation, and structured document creation using Generative AI.
+
+2. Objectives
+The solution aims to:
+Convert doctor-patient conversations into text.
+Automatically generate SOAP notes.
+Validate documentation completeness.
+Suggest ICD-10 diagnosis codes.
+Generate structured EHR-ready documentation.
+Reduce physician documentation workload.
+
+3. High-Level Architecture
+Doctor Consultation
+│
+▼
+Voice Agent
+(Speech-to-Text)
+│
+▼
+Transcript
+│
+▼
+SOAP Note Agent
+│
+▼
+Compliance Agent
+│
+▼
+ICD Coding Agent
+│
+▼
+EHR Agent
+│
+▼
+Final Clinical Document
+
+4. Technology Stack
+Frontend
+Streamlit
+Purpose:
+User Interface
+Audio upload
+Transcript review
+SOAP Note display
+ICD code display
+Download reports
+Benefits:
+Entire application can be built in Python
+Fast development
+Easy deployment
+
+Backend
+Python
+Purpose:
+Business Logic
+Prompt Engineering
+Agent Orchestration
+Libraries:
+Python 3.11+
+
+FastAPI (Optional)
+Purpose:
+API layer
+Agent communication
+Can be skipped in MVP.
+
+AI Services
+Azure OpenAI
+Models:
+GPT-4o
+GPT-4.1
+Responsibilities:
+SOAP note creation
+Validation support
+ICD code reasoning
+
+Speech Processing
+OpenAI Whisper
+Purpose:
+Doctor Audio
+↓
+Transcription
+Input:
+MP3
+WAV
+M4A
+Output:
+Consultation Transcript
+
+Database
+SQLite (MVP)
+Stores:
+Patient Records
+Transcripts
+SOAP Notes
+ICD Codes
+Audit Logs
+Production:
+PostgreSQL
+Azure SQL
+
+Vector Database
+FAISS
+Purpose:
+ICD Code Search
+Medical Knowledge Search
+Stores:
+ICD-10 Embeddings
+Diagnosis Descriptions
+``
+
+5. System Components
+
+Agent 1: Voice Agent : Siddhant Barman
+Purpose
+Convert doctor-patient audio into text.
+Input
+Audio Recording
+Output
+Transcript
+Technologies
+Whisper
+Azure Speech Service
+Workflow
+Audio File
+↓
+Speech Recognition
+↓
+Transcript
+
+Agent 2: SOAP Note Agent : Shiksha Rawat
+Purpose
+Automatically generate SOAP Notes.
+SOAP stands for:
+S - Subjective
+O - Objective
+A - Assessment
+P - Plan
+Input
+Transcript
+``
+Output
+SOAP Note
+Sample Output
+Subjective:
+Patient complains of chest pain for 2 days.
+
+Objective:
+BP 140/90
+Pulse 95
+
+Assessment:
+Possible Angina
+
+Plan:
+ECG
+Blood Tests
+Cardiology Consultation
+Prompt Template
+You are an experienced clinical documentation assistant.
+
+Convert the provided doctor-patient transcript into a SOAP Note.
+
+Output Format:
+
+Subjective:
+Objective:
+Assessment:
+Plan:
+
+Agent 3: Compliance Agent - Aditya And Rani
+Purpose
+Verify completeness and quality of documentation.
+Checks
+Mandatory Fields
+Subjective
+Objective
+Assessment
+Plan
+Additional Rules
+Diagnosis Present
+Treatment Present
+Patient History Present
+Output
+Compliance Score
+Missing Information
+Recommendations
+Example
+Compliance Score: 90%
+
+Missing:
+- Family History
+
+Agent 4: ICD Coding Agent - Sagar Swamy,Adrija Sadhu
+Purpose
+Recommend ICD-10 billing and diagnosis codes.
+Input
+SOAP Note
+Output
+ICD Code Suggestions
+Example
+Diagnosis:
+Chest Pain
+
+Suggested ICD Codes:
+
+R07.9
+I20.9
+``
+Workflow
+SOAP Note
+↓
+Diagnosis Extraction
+↓
+Vector Search
+↓
+ICD Matching
+↓
+Code Recommendation
+Technologies
+Azure OpenAI
+FAISS
+ICD-10 Dataset
+
+Agent 5: EHR Agent - Vaishali Sahu
+Purpose
+Create structured EHR-ready output.
+Input
+SOAP Note
+ICD Codes
+Compliance Results
+Output
+{
+"patient_id": "P1001",
+"subjective": "...",
+"objective": "...",
+"assessment": "...",
+"plan": "...",
+"icd_codes": [
+"I20.9"
+]
+}
+Export Formats
+PDF
+DOCX
+JSON
+FHIR Resource
+
+6. Streamlit Screens
+
+Screen 1: Consultation Upload
+Features:
+Upload Audio
+Paste Transcript
+View Transcript
++----------------------------------+
+| Upload Consultation Audio |
++----------------------------------+
+
+[Choose File]
+
+Or
+
+Paste Transcript
+
+Screen 2: SOAP Generation
+Generate SOAP Note
+Output:
+Subjective
+Objective
+Assessment
+Plan
+
+Screen 3: Compliance Validation
+Output:
+Compliance Score: 95%
+
+✓ Subjective
+✓ Objective
+✓ Assessment
+✓ Plan
+
+Screen 4: ICD Suggestion
+Output:
+Recommended Codes
+
+R07.9
+I20.9
+
+Screen 5: Final Clinical Note
+Features:
+Download PDF
+Download DOCX
+Download JSON
+
+7. Database Design:  Richa Singal, Rishit S
+Table: Patients
+patient_id
+patient_name
+gender
+age
+created_date
+
+Table: Consultations
+consultation_id
+patient_id
+transcript
+soap_note
+compliance_score
+created_date
+
+Table: ICD_Codes
+code_id
+consultation_id
+icd_code
+description
+
+8. Project Folder Structure
+AI_Clinical_Documentation_Assistant/
+
+│
+├── app.py
+│
+├── agents/
+│ ├── voice_agent.py
+│ ├── soap_agent.py
+│ ├── compliance_agent.py
+│ ├── icd_agent.py
+│ └── ehr_agent.py
+│
+├── database/
+│ ├── db.py
+│ └── schema.sql
+│
+├── prompts/
+│ ├── soap_prompt.txt
+│
+├── data/
+│ └── icd10_dataset.csv
+│
+├── reports/
+│
+└── requirements.txt
+``
+
+9. Estimated Development Timeline
+Phase
+Duration
+Streamlit UI
+2 Days
+SOAP Agent
+2 Days
+Compliance Agent
+1 Day
+ICD Coding Agent
+3 Days
+SQLite Integration
+1 Day
+Testing
+2 Days
+Documentation
+1 Day
+
+Total MVP Duration: 10-12 Days
+
+10. Expected Business Benefits
+For Physicians
+Reduced documentation time
+Faster patient handling
+Lower burnout
+For Hospitals
+Better documentation quality
+Improved coding accuracy
+Increased operational efficiency
+For Patients
+More physician interaction time
+Better record quality
+Improved continuity of care
+
+11. Future Enhancements
+Phase 2
+Multi-language consultations
+FHIR Integration
+Real-time note generation
+Medical terminology correction
+Appointment summarization
+Phase 3
+Multi-agent workflow with CrewAI
+Clinical Decision Support
+Risk Prediction Models
+Drug Interaction Checks
+Healthcare Copilot Assistant
+This scope is ideal for a Life Sciences & Healthcare GenAI portfolio project, hackathon solution, or internal enterprise proof-of-concept using Streamlit + Python + Azure OpenAI + Whisper + FAISS.
+

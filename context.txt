@@ -1,0 +1,427 @@
+====================================================================================================
+FILE: app.py
+====================================================================================================
+
+import json
+import pandas as pd
+import streamlit as st
+
+from agents.voice_agent import transcribe
+from agents.soap_agent import generate_soap
+from agents.compliance_agent import validate_soap
+from agents.icd_agent import suggest_icd
+from agents.ehr_agent import build_ehr
+
+from services.export_service import (
+    export_pdf,
+    export_docx,
+    export_json
+)
+
+st.set_page_config(
+    page_title="AI Clinical Documentation Assistant",
+    layout="wide"
+)
+
+st.title(
+    "🏥 AI Clinical Documentation Assistant"
+)
+
+if "transcript" not in st.session_state:
+    st.session_state.transcript = ""
+
+if "soap" not in st.session_state:
+    st.session_state.soap = ""
+
+uploaded_file = st.file_uploader(
+    "Upload Audio",
+    type=[
+        "wav",
+        "mp3",
+        "m4a"
+    ]
+)
+
+manual_text = st.text_area(
+    "Or Paste Transcript"
+)
+
+if uploaded_file:
+
+    with open(
+        uploaded_file.name,
+        "wb"
+    ) as file:
+
+        file.write(
+            uploaded_file.getbuffer()
+        )
+
+    st.session_state.transcript = transcribe(
+        uploaded_file.name
+    )
+
+if manual_text:
+    st.session_state.transcript = manual_text
+
+st.subheader("Transcript")
+
+st.text_area(
+    "",
+    st.session_state.transcript,
+    height=200
+)
+
+if st.button("Generate SOAP Note"):
+
+    st.session_state.soap = generate_soap(
+        st.session_state.transcript
+    )
+
+st.subheader("SOAP Note")
+
+st.text_area(
+    "",
+    st.session_state.soap,
+    height=300
+)
+
+if st.session_state.soap:
+
+    compliance = validate_soap(
+        st.session_state.soap
+    )
+
+    st.metric(
+        "Compliance Score",
+        f"{compliance['score']}%"
+    )
+
+    icd = suggest_icd(
+        st.session_state.soap
+    )
+
+    st.subheader("ICD Codes")
+
+    if icd:
+        st.dataframe(
+            pd.DataFrame(icd)
+        )
+
+    ehr = build_ehr(
+        st.session_state.transcript,
+        st.session_state.soap,
+        compliance,
+        icd
+    )
+
+    st.subheader("EHR JSON")
+
+    st.json(
+        json.loads(ehr)
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+
+        if st.button("Export PDF"):
+
+            pdf = export_pdf(
+                st.session_state.soap
+            )
+
+            st.success(pdf)
+
+    with col2:
+
+        if st.button("Export DOCX"):
+
+            docx = export_docx(
+                st.session_state.soap
+            )
+
+            st.success(docx)
+
+    with col3:
+
+        if st.button("Export JSON"):
+
+            json_file = export_json(
+                ehr
+            )
+
+            st.success(json_file)
+
+
+====================================================================================================
+FILE: agents\compliance_agent.py
+====================================================================================================
+
+def validate_soap(soap):
+
+    required = [
+        "subjective",
+        "objective",
+        "assessment",
+        "plan"
+    ]
+
+    score = 0
+    missing = []
+
+    for item in required:
+
+        if item in soap.lower():
+            score += 25
+        else:
+            missing.append(item)
+
+    return {
+        "score": score,
+        "missing": missing
+    }
+
+
+====================================================================================================
+FILE: agents\ehr_agent.py
+====================================================================================================
+
+import json
+
+
+def build_ehr(
+        transcript,
+        soap,
+        compliance,
+        icd
+):
+
+    document = {
+
+        "transcript": transcript,
+
+        "soap_note": soap,
+
+        "compliance": compliance,
+
+        "icd_codes": icd
+
+    }
+
+    return json.dumps(
+        document,
+        indent=4
+    )
+
+
+====================================================================================================
+FILE: agents\icd_agent.py
+====================================================================================================
+
+import pandas as pd
+
+
+def suggest_icd(soap):
+
+    df = pd.read_csv(
+        "data/icd10_dataset.csv"
+    )
+
+    text = soap.lower()
+
+    result = []
+
+    if "chest pain" in text:
+
+        result.append(
+            df[df["code"] == "R07.9"]
+            .to_dict("records")[0]
+        )
+
+    if "angina" in text:
+
+        result.append(
+            df[df["code"] == "I20.9"]
+            .to_dict("records")[0]
+        )
+
+    if "hypertension" in text:
+
+        result.append(
+            df[df["code"] == "I10"]
+            .to_dict("records")[0]
+        )
+
+    if "diabetes" in text:
+
+        result.append(
+            df[df["code"] == "E11.9"]
+            .to_dict("records")[0]
+        )
+
+    return result
+
+
+====================================================================================================
+FILE: agents\soap_agent.py
+====================================================================================================
+
+from services.openai_service import ask_llm
+
+
+def generate_soap(transcript):
+
+    with open(
+        "prompts/soap_prompt.txt",
+        "r",
+        encoding="utf-8"
+    ) as file:
+
+        prompt = file.read()
+
+    prompt = prompt.replace(
+        "{transcript}",
+        transcript
+    )
+
+    return ask_llm(prompt)
+
+
+====================================================================================================
+FILE: agents\voice_agent.py
+====================================================================================================
+
+import whisper
+
+model = whisper.load_model("base")
+
+
+def transcribe(audio_path):
+
+    result = model.transcribe(audio_path)
+
+    return result["text"]
+
+
+====================================================================================================
+FILE: database\db.py
+====================================================================================================
+
+
+
+
+====================================================================================================
+FILE: services\export_service.py
+====================================================================================================
+
+import json
+
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Paragraph
+)
+
+from reportlab.lib.styles import (
+    getSampleStyleSheet
+)
+
+from docx import Document
+
+
+def export_pdf(content):
+
+    filename = "reports/report.pdf"
+
+    pdf = SimpleDocTemplate(filename)
+
+    styles = getSampleStyleSheet()
+
+    pdf.build(
+        [
+            Paragraph(
+                content.replace(
+                    "\n",
+                    "<br/>"
+                ),
+                styles["BodyText"]
+            )
+        ]
+    )
+
+    return filename
+
+
+def export_docx(content):
+
+    filename = "reports/report.docx"
+
+    doc = Document()
+
+    doc.add_heading(
+        "Clinical Report",
+        0
+    )
+
+    doc.add_paragraph(content)
+
+    doc.save(filename)
+
+    return filename
+
+
+def export_json(content):
+
+    filename = "reports/report.json"
+
+    with open(
+        filename,
+        "w"
+    ) as file:
+
+        file.write(content)
+
+    return filename
+
+
+====================================================================================================
+FILE: services\openai_service.py
+====================================================================================================
+
+import os
+
+from dotenv import load_dotenv
+from openai import AzureOpenAI
+
+load_dotenv()
+
+client = AzureOpenAI(
+    api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+    api_version=os.getenv("AZURE_OPENAI_API_VERSION"),
+    azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT")
+)
+
+DEPLOYMENT = os.getenv("AZURE_OPENAI_DEPLOYMENT")
+
+
+def ask_llm(prompt):
+
+    response = client.chat.completions.create(
+        model=DEPLOYMENT,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.2
+    )
+
+    return response.choices[0].message.content
+
+
+====================================================================================================
+FILE: utils\parser.py
+====================================================================================================
+
+

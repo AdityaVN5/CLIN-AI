@@ -1,0 +1,174 @@
+Think of this project as an AI assistant for doctors that automatically creates medical documentation.
+The Problem
+Today, after seeing a patient, a doctor spends a lot of time writing:
+Patient symptoms
+Observations
+Diagnosis
+Treatment plan
+Medical records
+Billing codes
+This takes time away from patient care.
+
+What Your Project Does
+Step 1: Doctor Talks to Patient
+Example conversation:
+Plain Text
+Doctor: What brings you in today?
+ 
+Patient: I have chest pain since yesterday.
+ 
+Doctor: Any breathing issues?
+ 
+Patient: No.
+Show more lines
+
+Step 2: Voice Agent
+If the doctor records the conversation:
+Plain Text
+Audio File
+↓
+Voice Agent (Whisper)
+↓
+Text Transcript
+Show more lines
+Output:
+Plain Text
+Patient reports chest pain since yesterday.
+No breathing issues.
+Show more lines
+
+Step 3: SOAP Note Agent
+The transcript is sent to GPT.
+GPT converts the conversation into a medical note.
+Input:
+Plain Text
+Patient reports chest pain since yesterday.
+No breathing issues.
+Show more lines
+Output:
+Plain Text
+Subjective:
+Patient reports chest pain.
+ 
+Objective:
+Patient alert and responsive.
+ 
+Assessment:
+Possible cardiac chest pain.
+ 
+Plan:
+Recommend ECG and blood work.
+Show more lines
+This saves the doctor from manually writing notes.
+
+Step 4: Compliance Agent
+Checks whether the SOAP note is complete.
+It asks:
+✅ Is Subjective present?
+✅ Is Objective present?
+✅ Is Assessment present?
+✅ Is Plan present?
+Output:
+Plain Text
+Compliance Score: 100%
+Show more lines
+or
+Plain Text
+Compliance Score: 75%
+ 
+Missing:
+Objective Section
+Show more lines
+
+Step 5: ICD Coding Agent
+ICD codes are standard diagnosis codes used for:
+Billing
+Insurance
+Medical records
+Example:
+Plain Text
+Diagnosis:
+Chest Pain
+``
+Show more lines
+Suggested code:
+Plain Text
+R07.9
+Show more lines
+Another example:
+Plain Text
+Diagnosis:
+Diabetes
+Show more lines
+Suggested code:
+Plain Text
+E11.9
+Show more lines
+This helps medical coders and hospitals.
+
+Step 6: EHR Agent
+Combines everything into a final structured medical record.
+Output:
+JSON
+{
+"soap_note": {
+"subjective": "...",
+"objective": "...",
+"assessment": "...",
+"plan": "..."
+},
+"compliance_score": 100,
+"icd_codes": [
+"R07.9"
+]
+}
+Show more lines
+
+Step 7: Export
+The doctor can download:
+PDF
+DOCX
+JSON
+Example:
+Plain Text
+Patient Visit Report.pdf
+Show more lines
+
+End-to-End Flow
+Plain Text
+Doctor Consultation
+↓
+Audio Recording
+↓
+Whisper (Speech to Text)
+↓
+Transcript
+↓
+SOAP Note Agent (GPT)
+↓
+Compliance Agent
+↓
+ICD Coding Agent
+↓
+EHR Agent
+↓
+PDF / DOCX / JSON
+ 
+Show more lines
+
+Real Business Value
+For Doctors
+Less paperwork
+Faster documentation
+More patient interaction
+For Hospitals
+Better medical records
+Better billing accuracy
+Higher productivity
+For Patients
+More consultation time
+Better documentation quality
+
+What You Can Say in an Interview
+"I developed an AI Clinical Documentation Assistant using Streamlit, Python, Whisper, and Azure OpenAI. The solution converts doctor-patient conversations into structured SOAP notes, validates documentation completeness, recommends ICD-10 codes, and generates EHR-ready reports in PDF, DOCX, and JSON formats. The objective is to reduce physician documentation effort and improve clinical workflow efficiency."
+

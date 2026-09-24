@@ -1,0 +1,1 @@
+You are formatting a documentation record. Do not add facts. Return the supplied patient, consultation, compliance and ICD information in the requested structured form.
