@@ -15,7 +15,7 @@ class Settings:
     vision_model: str = os.getenv("GROQ_VISION_MODEL", "qwen/qwen3.8-27b")
     tts_model: str = os.getenv("GROQ_TTS_MODEL", "canopylabs/orpheus-v1-english")
     safety_model: str = os.getenv("GROQ_SAFETY_MODEL", "openai/gpt-oss-safeguard-20b")
-    db_path: str = os.getenv("DB_PATH", "database/app.db")
+    db_path: str = os.getenv("DB_PATH", "/tmp/app.db" if os.getenv("VERCEL") else "database/app.db")
     groq_base_url: str = "https://api.groq.com/openai/v1"
 
 settings = Settings()
