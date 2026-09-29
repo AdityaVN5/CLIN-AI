@@ -187,7 +187,7 @@ export const SAMPLE_CONSULTATIONS: Consultation[] = [
       dob: '1972-04-14',
       mrn: 'MRN-884021',
       encounterDate: '2026-09-24',
-      provider: 'Dr. Aditya M., MD',
+      provider: 'Dr. Ankita M., MD',
       specialty: 'Cardiovascular Medicine'
     },
     transcript: `Doctor: Good morning Robert. What brings you in today?
@@ -384,7 +384,7 @@ Doctor: I'm prescribing sublingual nitroglycerin 0.4 mg as needed for acute ches
       dob: '1964-11-09',
       mrn: 'MRN-773190',
       encounterDate: '2026-09-23',
-      provider: 'Dr. Aditya M., MD',
+      provider: 'Dr. Ankita M., MD',
       specialty: 'Endocrinology & Metabolism'
     },
     transcript: `Doctor: Hello Elena. We are reviewing your recent labs and 3-month diabetes follow-up today.
@@ -550,7 +550,7 @@ Doctor: Yes, I am submitting a referral to Podiatry for diabetic foot care and f
       dob: '1988-07-22',
       mrn: 'MRN-449102',
       encounterDate: '2026-09-21',
-      provider: 'Dr. Aditya M., MD',
+      provider: 'Dr. Ankita M., MD',
       specialty: 'Urgent Care & Family Medicine'
     },
     transcript: `Doctor: Hi Marcus, how can I help you today?

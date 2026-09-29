@@ -441,7 +441,7 @@ def format_consultation_for_frontend(c_row: dict) -> dict:
         "dob": f"{2026 - int(age)}-05-12" if age else "1980-01-01",
         "mrn": f"MRN-{pid}",
         "encounterDate": created.split(" ")[0] if " " in created else created,
-        "provider": "Dr. Aditya M., MD",
+        "provider": "Dr. Ankita M., MD",
         "specialty": "Internal Medicine & Clinical Documentation",
     }
 

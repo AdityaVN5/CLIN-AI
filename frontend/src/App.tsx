@@ -37,7 +37,7 @@ export default function App() {
   const [newPatientGender, setNewPatientGender] = useState('Not specified');
 
   // Physician profile state
-  const [doctorName, setDoctorName] = useState('Dr. Aditya M., MD');
+  const [doctorName, setDoctorName] = useState('Dr. Ankita M., MD');
   const [specialty, setSpecialty] = useState('Cardiology & Internal Medicine');
   const [institution, setInstitution] = useState('ClinAT Health Network');
 
